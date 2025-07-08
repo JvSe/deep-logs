@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+  DEBUG
+  CRITICAL
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  urlPhoto  String?
+  role      UserRole  @default(USER)
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Log {
+  id          String   @id @default(uuid())
+  level       LogLevel @default(INFO)
+  message     String
+  details     Json? // Para dados estruturados adicionais
+  deviceId    String // ID único do dispositivo
+  deviceModel String? // Modelo do dispositivo
+  osVersion   String? // Versão do sistema operacional
+  appVersion  String? // Versão do aplicativo
+  latitude    Float? // Coordenadas GPS
+  longitude   Float?
+  userId      String? // ID do usuário (se aplicável)
+  nameUser    String? // Nome do usuário (se aplicável)
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Índices para melhor performance
+  @@index([level])
+  @@index([timestamp])
+  @@index([deviceId])
+  @@index([userId])
+  @@map("logs")
+}
+
+model LogDailySummary {
+  id       String   @id @default(uuid())
+  date     DateTime @unique
+  info     Int      @default(0)
+  warning  Int      @default(0)
+  error    Int      @default(0)
+  debug    Int      @default(0)
+  critical Int      @default(0)
+  total    Int      @default(0)
+
+  @@map("log_daily_summaries")
+}
