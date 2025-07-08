@@ -47,6 +47,7 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import JsonView from "@uiw/react-json-view";
+import { vscodeTheme } from "@uiw/react-json-view/vscode";
 import * as React from "react";
 import { z } from "zod";
 
@@ -539,23 +540,21 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          {!isMobile && (
-            <>
-              <div className="grid gap-2">
-                <div className="flex gap-2 leading-none font-medium">
-                  Descrição do Log <IconBug className="size-4" />
-                </div>
-                <div className="text-muted-foreground">{item.message}</div>
-              </div>
-              <Separator />
-            </>
-          )}
+          <div className="grid gap-2">
+            <div className="flex gap-2 leading-none font-medium">
+              Descrição do Log <IconBug className="size-4" />
+            </div>
+            <div className="text-muted-foreground">{item.message}</div>
+          </div>
+          <Separator className="my-2" />
+
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">
               <div className="font-medium">Detalhes</div>
               <JsonView
                 displayDataTypes={false}
                 displayObjectSize={false}
+                style={vscodeTheme}
                 value={JSON.parse(item.details)}
               />
             </div>

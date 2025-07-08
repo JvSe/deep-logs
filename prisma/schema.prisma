@@ -60,7 +60,7 @@ model Log {
   @@map("logs")
 }
 
-model LogDailySummary {
+model LogDaily {
   id       String   @id @default(uuid())
   date     DateTime @unique
   info     Int      @default(0)
@@ -70,5 +70,5 @@ model LogDailySummary {
   critical Int      @default(0)
   total    Int      @default(0)
 
-  @@map("log_daily_summaries")
+  @@map("log_daily")
 }

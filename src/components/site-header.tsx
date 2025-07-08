@@ -3,7 +3,7 @@ import { useAuthenticated } from "@/hooks/auth";
 import { NavUser } from "./nav-user";
 
 export function SiteHeader() {
-  const { user } = useAuthenticated.getState();
+  const { user } = useAuthenticated();
 
   console.log("user", user);
   return (
