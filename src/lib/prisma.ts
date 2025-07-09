@@ -3,15 +3,18 @@ import { PrismaClient } from "@prisma/client";
 let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === "production") {
-  prisma = new PrismaClient();
+  prisma = new PrismaClient({
+    log: ["error"],
+    errorFormat: "minimal",
+  });
 } else {
-  const globalForPrisma = global as typeof globalThis & {
-    prisma?: PrismaClient;
-  };
-  if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient();
+  if (!(global as any).prisma) {
+    (global as any).prisma = new PrismaClient({
+      log: ["error"],
+      errorFormat: "minimal",
+    });
   }
-  prisma = globalForPrisma.prisma;
+  prisma = (global as any).prisma;
 }
 
 export { prisma };
