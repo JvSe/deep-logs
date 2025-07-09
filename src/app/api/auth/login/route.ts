@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       { status: HttpStatusCode.Ok }
     );
   } catch (error) {
-    console.error("Erro no login:", error);
+    console.error("Erro no login:", JSON.stringify(error, null, 2));
     return NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 }
