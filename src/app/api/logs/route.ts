@@ -1,8 +1,7 @@
-import { LogLevel, PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { LogLevel } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
 
 const LOG_TYPES = ["info", "warning", "error", "debug", "critical"] as const;
 type LogType = (typeof LOG_TYPES)[number];
