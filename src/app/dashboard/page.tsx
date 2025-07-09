@@ -1,9 +1,20 @@
+"use client";
+
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
-export default async function Page() {
+export default function Page() {
+  const { data: logs } = useQuery({
+    queryKey: ["logs"],
+    queryFn: async () => await axios.get("/api/logs"),
+    select: (data) => data.data,
+    refetchInterval: 10e3,
+  });
+
   return (
     <SidebarProvider
       style={
@@ -23,7 +34,7 @@ export default async function Page() {
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
-              <DataTable data={[]} />
+              <DataTable data={logs || []} />
             </div>
           </div>
         </div>

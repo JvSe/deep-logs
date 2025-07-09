@@ -29,7 +29,6 @@ import {
   IconChevronsRight,
   IconGripVertical,
   IconLayoutColumns,
-  IconTrash,
 } from "@tabler/icons-react";
 import {
   ColumnDef,
@@ -230,7 +229,7 @@ export function DataTable({
 }: {
   data: z.infer<typeof schema>[];
 }) {
-  const [data, setData] = React.useState(() => initialData);
+  const [data, setData] = React.useState([...initialData]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -249,10 +248,17 @@ export function DataTable({
     useSensor(KeyboardSensor, {})
   );
 
+  console.log("[data]:", data);
+  console.log("[initialData]:", initialData);
+
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
     [data]
   );
+
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   const table = useReactTable({
     data,
@@ -364,10 +370,10 @@ export function DataTable({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="destructive" size="sm">
+          {/* <Button variant="destructive" size="sm">
             <IconTrash />
             <span className="hidden lg:inline">Clear Log</span>
-          </Button>
+          </Button> */}
         </div>
       </div>
       <TabsContent
@@ -551,12 +557,18 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">
               <div className="font-medium">Detalhes</div>
-              <JsonView
-                displayDataTypes={false}
-                displayObjectSize={false}
-                style={vscodeTheme}
-                value={JSON.parse(item.details)}
-              />
+              {item.details ? (
+                <JsonView
+                  displayDataTypes={false}
+                  displayObjectSize={false}
+                  style={vscodeTheme}
+                  value={JSON.parse(item.details)}
+                />
+              ) : (
+                <div className="text-muted-foreground">
+                  Não há detalhes para este log.
+                </div>
+              )}
             </div>
 
             <Separator />

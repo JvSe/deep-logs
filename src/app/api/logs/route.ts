@@ -142,6 +142,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const summary = await prisma.logDaily.findMany();
+  const summary = await prisma.log.findMany({
+    orderBy: {
+      timestamp: "desc",
+    },
+  });
   return NextResponse.json(summary);
 }

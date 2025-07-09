@@ -78,8 +78,9 @@ export function ChartAreaInteractive() {
 
   const { data: chartData } = useQuery({
     queryKey: ["log-summary"],
-    queryFn: async () => await axios.get("/api/logs"),
+    queryFn: async () => await axios.get("/api/logs/summary"),
     select: (data) => data.data as ChartDataProps[],
+    refetchInterval: 10e3,
   });
 
   if (!chartData)
