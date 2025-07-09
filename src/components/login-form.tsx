@@ -69,7 +69,7 @@ export function LoginForm({
                 />
               </div>
               <div className="grid gap-3">
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                   <a
                     href="#"
@@ -77,7 +77,7 @@ export function LoginForm({
                   >
                     Forgot your password?
                   </a>
-                </div>
+                </div> */}
                 <Input
                   id="password"
                   type="password"
@@ -98,12 +98,12 @@ export function LoginForm({
                 Login
               </Button>
             </div>
-            <div className="text-center text-sm">
+            {/* <div className="text-center text-sm">
               Don&apos;t have an account?{" "}
               <a href="#" className="underline underline-offset-4">
                 Sign up
               </a>
-            </div>
+            </div> */}
           </div>
           {/* </form> */}
         </CardContent>
