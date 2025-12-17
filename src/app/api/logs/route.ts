@@ -142,10 +142,30 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const summary = await prisma.log.findMany({
+  const { searchParams } = new URL(req.url);
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+  const skip = (page - 1) * pageSize;
+
+  // Busca o total de logs
+  const total = await prisma.log.count();
+
+  // Busca os logs paginados
+  const logs = await prisma.log.findMany({
     orderBy: {
       timestamp: "desc",
     },
+    skip,
+    take: pageSize,
   });
-  return NextResponse.json(summary);
+
+  return NextResponse.json({
+    data: logs,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  });
 }

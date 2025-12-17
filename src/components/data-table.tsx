@@ -224,11 +224,30 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
+interface DataTableProps {
+  data: z.infer<typeof schema>[];
+  pagination?: {
+    pageIndex: number;
+    pageSize: number;
+  };
+  onPaginationChange?: (pagination: {
+    pageIndex: number;
+    pageSize: number;
+  }) => void;
+  paginationInfo?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export function DataTable({
   data: initialData,
-}: {
-  data: z.infer<typeof schema>[];
-}) {
+  pagination: externalPagination,
+  onPaginationChange,
+  paginationInfo,
+}: DataTableProps) {
   const [data, setData] = React.useState([...initialData]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -237,10 +256,20 @@ export function DataTable({
     []
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pagination, setPagination] = React.useState({
+  const [internalPagination, setInternalPagination] = React.useState({
     pageIndex: 0,
     pageSize: 10,
   });
+
+  // Usa paginação externa se fornecida, caso contrário usa interna
+  const pagination = externalPagination ?? internalPagination;
+  const setPagination = onPaginationChange
+    ? (updater: any) => {
+        const newPagination =
+          typeof updater === "function" ? updater(pagination) : updater;
+        onPaginationChange(newPagination);
+      }
+    : setInternalPagination;
   const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -279,7 +308,10 @@ export function DataTable({
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // Usa paginação manual se paginationInfo for fornecido (server-side)
+    manualPagination: !!paginationInfo,
+    pageCount: paginationInfo?.totalPages ?? undefined,
+    getPaginationRowModel: paginationInfo ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
@@ -434,7 +466,8 @@ export function DataTable({
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {paginationInfo?.total ?? table.getFilteredRowModel().rows.length}{" "}
+            row(s) selected.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
@@ -444,7 +477,10 @@ export function DataTable({
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
-                  table.setPageSize(Number(value));
+                  const newPageSize = Number(value);
+                  table.setPageSize(newPageSize);
+                  // Reset to first page when page size changes
+                  table.setPageIndex(0);
                 }}
               >
                 <SelectTrigger size="sm" className="w-20" id="rows-per-page">
@@ -463,7 +499,7 @@ export function DataTable({
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
               Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              {paginationInfo?.totalPages ?? table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
@@ -499,7 +535,11 @@ export function DataTable({
                 variant="outline"
                 className="hidden size-8 lg:flex"
                 size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                onClick={() =>
+                  table.setPageIndex(
+                    (paginationInfo?.totalPages ?? table.getPageCount()) - 1
+                  )
+                }
                 disabled={!table.getCanNextPage()}
               >
                 <span className="sr-only">Go to last page</span>

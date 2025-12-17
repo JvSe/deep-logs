@@ -6,14 +6,29 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { useState } from "react";
 
 export default function Page() {
-  const { data: logs } = useQuery({
-    queryKey: ["logs"],
-    queryFn: async () => await axios.get("/api/logs"),
-    select: (data) => data.data,
-    refetchInterval: 10e3,
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
   });
+
+  const { data: logsData } = useQuery({
+    queryKey: ["logs", pagination.pageIndex + 1, pagination.pageSize],
+    queryFn: async () =>
+      await axios.get("/api/logs", {
+        params: {
+          page: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+        },
+      }),
+    select: (data) => data.data,
+    // refetchInterval: 10e3,
+  });
+
+  const logs = logsData?.data || [];
+  const paginationInfo = logsData?.pagination;
 
   return (
     <SidebarProvider
@@ -34,7 +49,14 @@ export default function Page() {
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
-              <DataTable data={logs || []} />
+              <DataTable
+                data={logs}
+                pagination={pagination}
+                onPaginationChange={(newPagination) =>
+                  setPagination(newPagination)
+                }
+                paginationInfo={paginationInfo}
+              />
             </div>
           </div>
         </div>

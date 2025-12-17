@@ -90,7 +90,14 @@ export function ChartAreaInteractive() {
       </Card>
     );
 
-  const filteredData = chartData.filter((item) => {
+  // Ordena os dados por data (crescente) antes de filtrar
+  const sortedData = [...chartData].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    return dateA - dateB;
+  });
+
+  const filteredData = sortedData.filter((item) => {
     const date = new Date(item.date);
     const referenceDate = new Date("2024-06-30");
     let daysToSubtract = 90;
