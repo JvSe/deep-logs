@@ -8,13 +8,11 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 import {
-  arrayMove,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -243,12 +241,12 @@ interface DataTableProps {
 }
 
 export function DataTable({
-  data: initialData,
+  data,
   pagination: externalPagination,
   onPaginationChange,
   paginationInfo,
 }: DataTableProps) {
-  const [data, setData] = React.useState([...initialData]);
+  // const [data, setData] = React.useState([...initialData]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -277,17 +275,10 @@ export function DataTable({
     useSensor(KeyboardSensor, {})
   );
 
-  console.log("[data]:", data);
-  console.log("[initialData]:", initialData);
-
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
     [data]
   );
-
-  React.useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
 
   const table = useReactTable({
     data,
@@ -316,17 +307,6 @@ export function DataTable({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (active && over && active.id !== over.id) {
-      setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id);
-        const newIndex = dataIds.indexOf(over.id);
-        return arrayMove(data, oldIndex, newIndex);
-      });
-    }
-  }
 
   return (
     <Tabs
@@ -416,7 +396,6 @@ export function DataTable({
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
-            onDragEnd={handleDragEnd}
             sensors={sensors}
             id={sortableId}
           >

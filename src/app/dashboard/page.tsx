@@ -4,7 +4,7 @@ import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
 
@@ -24,6 +24,7 @@ export default function Page() {
         },
       }),
     select: (data) => data.data,
+    placeholderData: keepPreviousData,
     // refetchInterval: 10e3,
   });
 
@@ -50,7 +51,7 @@ export default function Page() {
                 <ChartAreaInteractive />
               </div>
               <DataTable
-                data={logs}
+                data={logsData?.data || []}
                 pagination={pagination}
                 onPaginationChange={(newPagination) =>
                   setPagination(newPagination)
