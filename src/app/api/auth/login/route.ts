@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("email", email);
 
     // Buscar usuário no banco
     const user = await prisma.user.findUnique({
@@ -41,7 +40,6 @@ export async function POST(request: NextRequest) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      console.log("Senha inválida");
       return NextResponse.json(
         { error: "Credenciais inválidas" },
         { status: 401 }

@@ -14,13 +14,29 @@ export default function Page() {
     pageSize: 10,
   });
 
+  const [filters, setFilters] = useState<{
+    nameUser?: string;
+    startDate?: string;
+    endDate?: string;
+  }>({});
+
   const { data: logsData } = useQuery({
-    queryKey: ["logs", pagination.pageIndex + 1, pagination.pageSize],
+    queryKey: [
+      "logs",
+      pagination.pageIndex + 1,
+      pagination.pageSize,
+      filters.nameUser,
+      filters.startDate,
+      filters.endDate,
+    ],
     queryFn: async () =>
       await axios.get("/api/logs", {
         params: {
           page: pagination.pageIndex + 1,
           pageSize: pagination.pageSize,
+          ...(filters.nameUser && { nameUser: filters.nameUser }),
+          ...(filters.startDate && { startDate: filters.startDate }),
+          ...(filters.endDate && { endDate: filters.endDate }),
         },
       }),
     select: (data) => data.data,
@@ -57,6 +73,12 @@ export default function Page() {
                   setPagination(newPagination)
                 }
                 paginationInfo={paginationInfo}
+                filters={filters}
+                onFiltersChange={(newFilters) => {
+                  setFilters(newFilters);
+                  // Resetar para primeira página quando filtros mudarem
+                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                }}
               />
             </div>
           </div>

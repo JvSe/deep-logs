@@ -147,11 +147,45 @@ export async function GET(req: NextRequest) {
   const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
   const skip = (page - 1) * pageSize;
 
-  // Busca o total de logs
-  const total = await prisma.log.count();
+  // Filtros
+  const nameUser = searchParams.get("nameUser") || undefined;
+  const startDate = searchParams.get("startDate") || undefined;
+  const endDate = searchParams.get("endDate") || undefined;
 
-  // Busca os logs paginados
+  // Construir condições de filtro
+  const where: any = {};
+
+  // Filtro por nome do usuário (busca parcial, case-insensitive)
+  if (nameUser) {
+    where.nameUser = {
+      contains: nameUser,
+      mode: "insensitive",
+    };
+  }
+
+  // Filtro por período de data
+  if (startDate || endDate) {
+    where.timestamp = {};
+    if (startDate) {
+      // Início do dia
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      where.timestamp.gte = start;
+    }
+    if (endDate) {
+      // Fim do dia
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      where.timestamp.lte = end;
+    }
+  }
+
+  // Busca o total de logs com filtros aplicados
+  const total = await prisma.log.count({ where });
+
+  // Busca os logs paginados com filtros aplicados
   const logs = await prisma.log.findMany({
+    where,
     orderBy: {
       timestamp: "desc",
     },

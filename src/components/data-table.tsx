@@ -20,13 +20,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   IconBug,
-  IconChevronDown,
+  IconCalendar,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
   IconGripVertical,
-  IconLayoutColumns,
+  IconSearch,
+  IconX
 } from "@tabler/icons-react";
 import {
   ColumnDef,
@@ -58,15 +59,9 @@ import {
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
+  DrawerTitle
 } from "@/components/ui/drawer";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -84,8 +79,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 export const schema = z.object({
   id: z.string(),
@@ -117,6 +112,7 @@ function DragHandle({ id }: { id: string }) {
       variant="ghost"
       size="icon"
       className="text-muted-foreground size-7 hover:bg-transparent"
+      data-sortable-handle
     >
       <IconGripVertical className="text-muted-foreground size-3" />
       <span className="sr-only">Drag to reorder</span>
@@ -160,8 +156,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     accessorKey: "level",
     header: "Tipo de Log",
     cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />;
-      // return <p>{row.original.level}</p>;
+      return <p className="text-foreground">{row.original.level}</p>;
     },
     enableHiding: false,
   },
@@ -170,8 +165,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     header: "Descrição",
     size: Number.MAX_SAFE_INTEGER,
     cell: ({ row }) => (
-      <div className="w-32">
-        <p className="text-muted-foreground">{row.original.message}</p>
+      <div className="min-w-64 max-w-2xl">
+        <p className="text-muted-foreground truncate">{row.original.message}</p>
       </div>
     ),
   },
@@ -201,24 +196,189 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   });
+  const isMobile = useIsMobile();
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+
+  // Prevenir abertura do drawer durante o drag ou ao clicar no drag handle/checkbox
+  const handleClick = (e: React.MouseEvent) => {
+    // Se o clique for no drag handle ou checkbox, não abrir o drawer
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('[data-sortable-handle]') ||
+      target.closest('input[type="checkbox"]') ||
+      target.closest('[role="checkbox"]')
+    ) {
+      return;
+    }
+    setIsDrawerOpen(true);
+  };
 
   return (
-    <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
-      ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition,
-      }}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
+    <Drawer direction={isMobile ? "bottom" : "right"} open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+      <TableRow
+        data-state={row.getIsSelected() && "selected"}
+        data-dragging={isDragging}
+        ref={setNodeRef}
+        className="relative z-0 cursor-pointer data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 hover:bg-muted/50"
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition: transition,
+        }}
+        onClick={handleClick}
+      >
+        {row.getVisibleCells().map((cell) => (
+          <TableCell key={cell.id}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+      <DrawerContent className="min-w-[30vw]">
+        <DrawerHeader className="gap-1">
+          <DrawerTitle>{row.original.level}</DrawerTitle>
+          <DrawerDescription>
+            {row.original.deviceModel} - {row.original.osVersion}
+          </DrawerDescription>
+        </DrawerHeader>
+        <div
+          className="flex flex-col gap-4 overflow-y-auto px-4 text-sm"
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="grid gap-2">
+            <div className="flex gap-2 leading-none font-medium">
+              Descrição do Log <IconBug className="size-4" />
+            </div>
+            <div className="text-muted-foreground select-text">
+              {row.original.message}
+            </div>
+          </div>
+          <Separator className="my-2" />
+
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-2">
+              <div className="font-medium">Detalhes</div>
+              {row.original.details ? (
+                <div
+                  className="select-text"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <JsonView
+                    displayDataTypes={false}
+                    displayObjectSize={false}
+                    style={vscodeTheme}
+                    value={JSON.parse(row.original.details)}
+                  />
+                </div>
+              ) : (
+                <div className="text-muted-foreground">
+                  Não há detalhes para este log.
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            <div className="grid gap-4">
+              <div className="font-medium">Informações do Dispositivo</div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    ID do Dispositivo
+                  </div>
+                  <div>{row.original.deviceId}</div>
+                </div>
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Modelo
+                  </div>
+                  <div>{row.original.deviceModel}</div>
+                </div>
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Versão do Sistema
+                  </div>
+                  <div>{row.original.osVersion}</div>
+                </div>
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Versão do App
+                  </div>
+                  <div>{row.original.appVersion}</div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid gap-4">
+              <div className="font-medium">Localização</div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Latitude
+                  </div>
+                  <div>{row.original.latitude}</div>
+                </div>
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Longitude
+                  </div>
+                  <div>{row.original.longitude}</div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid gap-4">
+              <div className="font-medium">Informações do Usuário</div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    ID do Usuário
+                  </div>
+                  <div>{row.original.userId}</div>
+                </div>
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">Nome</div>
+                  <div>{row.original.nameUser}</div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid gap-4">
+              <div className="font-medium">Timestamps</div>
+              <div className="grid grid-cols-1 gap-4 text-sm">
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Timestamp do Log
+                  </div>
+                  <div>
+                    {new Date(row.original.timestamp).toLocaleString("pt-BR")}
+                  </div>
+                </div>
+                <div className="select-text">
+                  <div className="font-medium text-muted-foreground">
+                    Criado em
+                  </div>
+                  <div>
+                    {new Date(row.original.createdAt).toLocaleString("pt-BR")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DrawerFooter>
+          <DrawerClose asChild>
+            <Button>Done</Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -238,15 +398,63 @@ interface DataTableProps {
     total: number;
     totalPages: number;
   };
+  filters?: {
+    nameUser?: string;
+    startDate?: string;
+    endDate?: string;
+  };
+  onFiltersChange?: (filters: {
+    nameUser?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => void;
 }
+
+type FilterType =
+  | "all-logs"
+  | "critical-logs"
+  | "info-logs"
+  | "errors-logs"
+  | "warning-logs"
+  | "debug-logs";
 
 export function DataTable({
   data,
   pagination: externalPagination,
   onPaginationChange,
   paginationInfo,
+  filters: externalFilters,
+  onFiltersChange,
 }: DataTableProps) {
   // const [data, setData] = React.useState([...initialData]);
+  const [activeFilter, setActiveFilter] = React.useState<FilterType>("all-logs");
+  const [internalFilters, setInternalFilters] = React.useState<{
+    nameUser?: string;
+    startDate?: string;
+    endDate?: string;
+  }>({});
+
+  const filters = externalFilters ?? internalFilters;
+  const setFilters = onFiltersChange ?? setInternalFilters;
+
+  // Estado local para o campo de busca (com debounce)
+  const [searchValue, setSearchValue] = React.useState(filters.nameUser || "");
+
+  // Debounce para o campo de busca
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchValue !== (filters.nameUser || "")) {
+        const newFilters = {
+          nameUser: searchValue || undefined,
+          startDate: filters.startDate || undefined,
+          endDate: filters.endDate || undefined,
+        };
+        setFilters(newFilters as any);
+      }
+    }, 500); // 500ms de delay
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -275,13 +483,40 @@ export function DataTable({
     useSensor(KeyboardSensor, {})
   );
 
+  // Filtrar dados baseado no filtro ativo
+  const filteredData = React.useMemo(() => {
+    if (activeFilter === "all-logs") {
+      return data;
+    }
+
+    const filterMap: Record<FilterType, string[]> = {
+      "all-logs": [],
+      "critical-logs": ["critical", "fatal"],
+      "info-logs": ["info", "information"],
+      "errors-logs": ["error", "err"],
+      "warning-logs": ["warning", "warn"],
+      "debug-logs": ["debug"],
+    };
+
+    const levelsToFilter = filterMap[activeFilter];
+    if (!levelsToFilter || levelsToFilter.length === 0) {
+      return data;
+    }
+
+    return data.filter((item) =>
+      levelsToFilter.some((level) =>
+        item.level.toLowerCase().includes(level.toLowerCase())
+      )
+    );
+  }, [data, activeFilter]);
+
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
+    () => filteredData?.map(({ id }) => id) || [],
+    [filteredData]
   );
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     state: {
       sorting,
@@ -308,90 +543,215 @@ export function DataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  // Resetar paginação quando o filtro mudar
+  React.useEffect(() => {
+    table.setPageIndex(0);
+  }, [activeFilter, table]);
+
+  // Calcular contagens para os badges
+  const getFilterCount = (filterType: FilterType): number => {
+    if (filterType === "all-logs") return data.length;
+    
+    const filterMap: Record<FilterType, string[]> = {
+      "all-logs": [],
+      "critical-logs": ["critical", "fatal"],
+      "info-logs": ["info", "information"],
+      "errors-logs": ["error", "err"],
+      "warning-logs": ["warning", "warn"],
+      "debug-logs": ["debug"],
+    };
+
+    const levelsToFilter = filterMap[filterType];
+    if (!levelsToFilter || levelsToFilter.length === 0) return 0;
+
+    return data.filter((item) =>
+      levelsToFilter.some((level) =>
+        item.level.toLowerCase().includes(level.toLowerCase())
+      )
+    ).length;
+  };
+
   return (
-    <Tabs
-      defaultValue="all-logs"
-      className="w-full flex-col justify-start gap-6"
-    >
-      <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select defaultValue="outline">
-          <SelectTrigger
-            className="flex w-fit @4xl/main:hidden"
-            size="sm"
-            id="view-selector"
+    <div className="w-full flex-col justify-start gap-6">
+      <div className="flex flex-col gap-4 px-4 lg:px-6 mb-6">
+        {/* Linha única: Botões de tipo de log e filtros */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:justify-end">
+          {/* Botões de tipo de log */}
+          <div
+            className={cn(
+              "bg-muted text-muted-foreground inline-flex h-9 w-full lg:w-fit items-center justify-center rounded-lg p-[3px] overflow-x-auto lg:ml-auto",
+              "**:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 flex"
+            )}
           >
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all-logs">Todos os Logs</SelectItem>
-            <SelectItem value="critical-logs">Logs Críticos</SelectItem>
-            <SelectItem value="info-logs">Logs de Informação</SelectItem>
-            <SelectItem value="errors-logs">Logs de Erros</SelectItem>
-            <SelectItem value="warning-logs">Logs de Alerta</SelectItem>
-            <SelectItem value="debug-logs">Logs de Debug</SelectItem>
-          </SelectContent>
-        </Select>
-        <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="all-logs">Todos os Logs</TabsTrigger>
-          <TabsTrigger value="critical-logs">Logs Críticos</TabsTrigger>
-          <TabsTrigger value="info-logs">
-            Logs de Informação <Badge variant="secondary">3</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="errors-logs">
-            Logs de Erros <Badge variant="secondary">3</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="warning-logs">
-            Logs de Alerta <Badge variant="secondary">2</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="debug-logs">Logs de Debug</TabsTrigger>
-        </TabsList>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <IconLayoutColumns />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
-                <IconChevronDown />
+            <button
+              onClick={() => setActiveFilter("all-logs")}
+              className={cn(
+                "text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring",
+                activeFilter === "all-logs"
+                  ? "bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm"
+                  : ""
+              )}
+            >
+              Todos os Logs
+            </button>
+            <button
+              onClick={() => setActiveFilter("critical-logs")}
+              className={cn(
+                "text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring",
+                activeFilter === "critical-logs"
+                  ? "bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm"
+                  : ""
+              )}
+            >
+              Logs Críticos
+            </button>
+            <button
+              onClick={() => setActiveFilter("info-logs")}
+              className={cn(
+                "text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring",
+                activeFilter === "info-logs"
+                  ? "bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm"
+                  : ""
+              )}
+            >
+              Logs de Informação{" "}
+              <Badge variant="secondary">{getFilterCount("info-logs")}</Badge>
+            </button>
+            <button
+              onClick={() => setActiveFilter("errors-logs")}
+              className={cn(
+                "text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring",
+                activeFilter === "errors-logs"
+                  ? "bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm"
+                  : ""
+              )}
+            >
+              Logs de Erros{" "}
+              <Badge variant="secondary">{getFilterCount("errors-logs")}</Badge>
+            </button>
+            <button
+              onClick={() => setActiveFilter("warning-logs")}
+              className={cn(
+                "text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring",
+                activeFilter === "warning-logs"
+                  ? "bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm"
+                  : ""
+              )}
+            >
+              Logs de Alerta{" "}
+              <Badge variant="secondary">{getFilterCount("warning-logs")}</Badge>
+            </button>
+            <button
+              onClick={() => setActiveFilter("debug-logs")}
+              className={cn(
+                "text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring",
+                activeFilter === "debug-logs"
+                  ? "bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm"
+                  : ""
+              )}
+            >
+              Logs de Debug
+            </button>
+          </div>
+
+          {/* Filtros de busca e data na mesma linha */}
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:ml-auto">
+            {/* Campo de busca por nome */}
+            <div className="relative min-w-[200px] lg:w-[240px]">
+              <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                id="search-name"
+                type="text"
+                placeholder="Buscar por nome..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="pl-9 pr-9 h-9"
+              />
+              {searchValue && (
+                <button
+                  onClick={() => {
+                    setSearchValue("");
+                    setFilters({
+                      nameUser: undefined,
+                      startDate: filters.startDate || undefined,
+                      endDate: filters.endDate || undefined,
+                    } as any);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors rounded-sm hover:bg-muted p-0.5"
+                  type="button"
+                >
+                  <IconX className="size-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Filtro de data inicial */}
+            <div className="relative lg:min-w-[140px]">
+              <IconCalendar className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                id="start-date"
+                type="date"
+                value={filters.startDate || ""}
+                onChange={(e) => {
+                  const newFilters = {
+                    nameUser: filters.nameUser || undefined,
+                    startDate: e.target.value || undefined,
+                    endDate: filters.endDate || undefined,
+                  };
+                  setFilters(newFilters as any);
+                }}
+                className="pl-9 h-9"
+              />
+            </div>
+
+            {/* Filtro de data final */}
+            <div className="relative lg:min-w-[140px]">
+              <IconCalendar className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                id="end-date"
+                type="date"
+                value={filters.endDate || ""}
+                onChange={(e) => {
+                  const newFilters = {
+                    nameUser: filters.nameUser || undefined,
+                    startDate: filters.startDate || undefined,
+                    endDate: e.target.value || undefined,
+                  };
+                  setFilters(newFilters as any);
+                }}
+                className="pl-9 h-9"
+              />
+            </div>
+
+            {/* Botão para limpar filtros */}
+            {(filters.nameUser || filters.startDate || filters.endDate) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchValue("");
+                  setFilters({
+                    nameUser: undefined,
+                    startDate: undefined,
+                    endDate: undefined,
+                  } as any);
+                }}
+                className="h-9 gap-2 shrink-0"
+              >
+                <IconX className="size-4" />
+                <span className="hidden sm:inline">Limpar</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {/* <Button variant="destructive" size="sm">
-            <IconTrash />
-            <span className="hidden lg:inline">Clear Log</span>
-          </Button> */}
+            )}
+          </div>
         </div>
       </div>
-      <TabsContent
-        value="all-logs"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
+      <div className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6">
         <div className="overflow-hidden rounded-lg border">
           <DndContext
             collisionDetection={closestCenter}
@@ -527,166 +887,8 @@ export function DataTable({
             </div>
           </div>
         </div>
-      </TabsContent>
-      <TabsContent value="critical-logs" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="info-logs" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="errors-logs" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="warning-logs" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="debug-logs" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-    </Tabs>
+      </div>
+    </div>
   );
 }
 
-function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
-  const isMobile = useIsMobile();
-
-  return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">
-          {item.level}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent className="min-w-[30vw]">
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>{item.level}</DrawerTitle>
-          <DrawerDescription>
-            {item.deviceModel} - {item.osVersion}
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          <div className="grid gap-2">
-            <div className="flex gap-2 leading-none font-medium">
-              Descrição do Log <IconBug className="size-4" />
-            </div>
-            <div className="text-muted-foreground">{item.message}</div>
-          </div>
-          <Separator className="my-2" />
-
-          <div className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <div className="font-medium">Detalhes</div>
-              {item.details ? (
-                <JsonView
-                  displayDataTypes={false}
-                  displayObjectSize={false}
-                  style={vscodeTheme}
-                  value={JSON.parse(item.details)}
-                />
-              ) : (
-                <div className="text-muted-foreground">
-                  Não há detalhes para este log.
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="grid gap-4">
-              <div className="font-medium">Informações do Dispositivo</div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    ID do Dispositivo
-                  </div>
-                  <div>{item.deviceId}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Modelo
-                  </div>
-                  <div>{item.deviceModel}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Versão do Sistema
-                  </div>
-                  <div>{item.osVersion}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Versão do App
-                  </div>
-                  <div>{item.appVersion}</div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="grid gap-4">
-              <div className="font-medium">Localização</div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Latitude
-                  </div>
-                  <div>{item.latitude}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Longitude
-                  </div>
-                  <div>{item.longitude}</div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="grid gap-4">
-              <div className="font-medium">Informações do Usuário</div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    ID do Usuário
-                  </div>
-                  <div>{item.userId}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-muted-foreground">Nome</div>
-                  <div>{item.nameUser}</div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="grid gap-4">
-              <div className="font-medium">Timestamps</div>
-              <div className="grid grid-cols-1 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Timestamp do Log
-                  </div>
-                  <div>{new Date(item.timestamp).toLocaleString("pt-BR")}</div>
-                </div>
-                <div>
-                  <div className="font-medium text-muted-foreground">
-                    Criado em
-                  </div>
-                  <div>{new Date(item.createdAt).toLocaleString("pt-BR")}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <DrawerFooter>
-          <DrawerClose asChild>
-            <Button>Done</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  );
-}
