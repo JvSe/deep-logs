@@ -49,7 +49,6 @@ import { vscodeTheme } from "@uiw/react-json-view/vscode";
 import * as React from "react";
 import { z } from "zod";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -408,9 +407,11 @@ interface DataTableProps {
     startDate?: string;
     endDate?: string;
   }) => void;
+  activeFilter?: FilterType;
+  onActiveFilterChange?: (filter: FilterType) => void;
 }
 
-type FilterType =
+export type FilterType =
   | "all-logs"
   | "critical-logs"
   | "info-logs"
@@ -425,9 +426,14 @@ export function DataTable({
   paginationInfo,
   filters: externalFilters,
   onFiltersChange,
+  activeFilter: externalActiveFilter,
+  onActiveFilterChange,
 }: DataTableProps) {
   // const [data, setData] = React.useState([...initialData]);
-  const [activeFilter, setActiveFilter] = React.useState<FilterType>("all-logs");
+  const [internalActiveFilter, setInternalActiveFilter] =
+    React.useState<FilterType>("all-logs");
+  const activeFilter = externalActiveFilter ?? internalActiveFilter;
+  const setActiveFilter = onActiveFilterChange ?? setInternalActiveFilter;
   const [internalFilters, setInternalFilters] = React.useState<{
     nameUser?: string;
     startDate?: string;
@@ -548,39 +554,16 @@ export function DataTable({
     table.setPageIndex(0);
   }, [activeFilter, table]);
 
-  // Calcular contagens para os badges
-  const getFilterCount = (filterType: FilterType): number => {
-    if (filterType === "all-logs") return data.length;
-    
-    const filterMap: Record<FilterType, string[]> = {
-      "all-logs": [],
-      "critical-logs": ["critical", "fatal"],
-      "info-logs": ["info", "information"],
-      "errors-logs": ["error", "err"],
-      "warning-logs": ["warning", "warn"],
-      "debug-logs": ["debug"],
-    };
-
-    const levelsToFilter = filterMap[filterType];
-    if (!levelsToFilter || levelsToFilter.length === 0) return 0;
-
-    return data.filter((item) =>
-      levelsToFilter.some((level) =>
-        item.level.toLowerCase().includes(level.toLowerCase())
-      )
-    ).length;
-  };
-
   return (
     <div className="w-full flex-col justify-start gap-6">
       <div className="flex flex-col gap-4 px-4 lg:px-6 mb-6">
         {/* Linha única: Botões de tipo de log e filtros */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:justify-end">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:justify-start">
           {/* Botões de tipo de log */}
           <div
             className={cn(
-              "bg-muted text-muted-foreground inline-flex h-9 w-full lg:w-fit items-center justify-center rounded-lg p-[3px] overflow-x-auto lg:ml-auto",
-              "**:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 flex"
+              "bg-muted text-muted-foreground inline-flex h-9 w-full lg:w-fit items-center justify-start rounded-lg p-[3px] overflow-x-auto",
+              "flex"
             )}
           >
             <button
@@ -617,8 +600,7 @@ export function DataTable({
                   : ""
               )}
             >
-              Logs de Informação{" "}
-              <Badge variant="secondary">{getFilterCount("info-logs")}</Badge>
+              Logs de Informação
             </button>
             <button
               onClick={() => setActiveFilter("errors-logs")}
@@ -630,8 +612,7 @@ export function DataTable({
                   : ""
               )}
             >
-              Logs de Erros{" "}
-              <Badge variant="secondary">{getFilterCount("errors-logs")}</Badge>
+              Logs de Erros
             </button>
             <button
               onClick={() => setActiveFilter("warning-logs")}
@@ -643,8 +624,7 @@ export function DataTable({
                   : ""
               )}
             >
-              Logs de Alerta{" "}
-              <Badge variant="secondary">{getFilterCount("warning-logs")}</Badge>
+              Logs de Alerta
             </button>
             <button
               onClick={() => setActiveFilter("debug-logs")}

@@ -15,6 +15,14 @@ const LOGLEVEL_TO_FIELD: Record<LogLevel, LogType> = {
   CRITICAL: "critical",
 };
 
+const LOGTYPE_FILTER_MAP: Record<string, LogLevel[]> = {
+  "critical-logs": [LogLevel.CRITICAL],
+  "info-logs": [LogLevel.INFO],
+  "errors-logs": [LogLevel.ERROR],
+  "warning-logs": [LogLevel.WARNING],
+  "debug-logs": [LogLevel.DEBUG],
+};
+
 // Schema Zod para validação dos dados
 const LogSchema = z.object({
   level: z.enum(["INFO", "WARNING", "ERROR", "DEBUG", "CRITICAL"], {
@@ -151,6 +159,7 @@ export async function GET(req: NextRequest) {
   const nameUser = searchParams.get("nameUser") || undefined;
   const startDate = searchParams.get("startDate") || undefined;
   const endDate = searchParams.get("endDate") || undefined;
+  const logType = searchParams.get("logType") || undefined;
 
   // Construir condições de filtro
   const where: any = {};
@@ -177,6 +186,16 @@ export async function GET(req: NextRequest) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       where.timestamp.lte = end;
+    }
+  }
+
+  // Filtro por tipo/nível de log (tabs)
+  if (logType && logType !== "all-logs") {
+    const levels = LOGTYPE_FILTER_MAP[logType];
+    if (levels && levels.length > 0) {
+      where.level = {
+        in: levels,
+      };
     }
   }
 
