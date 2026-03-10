@@ -72,9 +72,24 @@ export function ChartAreaInteractive() {
 
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange("7d");
+      setTimeRange((prev) => (prev !== "7d" ? "7d" : prev));
     }
   }, [isMobile]);
+
+  const tooltipContent = React.useMemo(
+    () => (
+      <ChartTooltipContent
+        labelFormatter={(value) => {
+          return new Date(value).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+        }}
+        indicator="dot"
+      />
+    ),
+    []
+  );
 
   const { data: chartData } = useQuery({
     queryKey: ["log-summary"],
@@ -241,18 +256,7 @@ export function ChartAreaInteractive() {
               />
               <ChartTooltip
                 cursor={false}
-                defaultIndex={isMobile ? -1 : 10}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => {
-                      return new Date(value).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      });
-                    }}
-                    indicator="dot"
-                  />
-                }
+                content={tooltipContent}
               />
               <Area
                 dataKey="warning"

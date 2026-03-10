@@ -538,6 +538,7 @@ export function DataTable({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
+    autoResetPageIndex: false,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     // Usa paginação manual se paginationInfo for fornecido (server-side)
@@ -549,10 +550,6 @@ export function DataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
-  // Resetar paginação quando o filtro mudar
-  React.useEffect(() => {
-    table.setPageIndex(0);
-  }, [activeFilter, table]);
 
   return (
     <div className="w-full flex-col justify-start gap-6">

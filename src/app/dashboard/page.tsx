@@ -8,7 +8,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export default function Page() {
   const [pagination, setPagination] = useState({
@@ -50,8 +50,28 @@ export default function Page() {
     // refetchInterval: 10e3,
   });
 
-  const logs = logsData?.data || [];
+  const tableData = useMemo(() => logsData?.data ?? [], [logsData?.data]);
   const paginationInfo = logsData?.pagination;
+
+  const handlePaginationChange = useCallback(
+    (newPagination: { pageIndex: number; pageSize: number }) => {
+      setPagination(newPagination);
+    },
+    []
+  );
+
+  const handleFiltersChange = useCallback(
+    (newFilters: { nameUser?: string; startDate?: string; endDate?: string }) => {
+      setFilters(newFilters);
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    },
+    []
+  );
+
+  const handleActiveFilterChange = useCallback((newFilter: FilterType) => {
+    setLogType(newFilter);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, []);
 
   return (
     <SidebarProvider
@@ -79,23 +99,14 @@ export default function Page() {
                 <ChartAreaInteractive />
               </div>
               <DataTable
-                data={logsData?.data || []}
+                data={tableData}
                 pagination={pagination}
-                onPaginationChange={(newPagination) =>
-                  setPagination(newPagination)
-                }
+                onPaginationChange={handlePaginationChange}
                 paginationInfo={paginationInfo}
                 filters={filters}
-                onFiltersChange={(newFilters) => {
-                  setFilters(newFilters);
-                  // Resetar para primeira página quando filtros mudarem
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-                }}
+                onFiltersChange={handleFiltersChange}
                 activeFilter={logType}
-                onActiveFilterChange={(newFilter) => {
-                  setLogType(newFilter);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-                }}
+                onActiveFilterChange={handleActiveFilterChange}
               />
             </div>
           </div>
